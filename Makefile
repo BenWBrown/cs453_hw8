@@ -7,9 +7,10 @@ BIN =  stereo2
 IMGLIB = ../imageLib
 ARCH := $(shell arch)
 
+DBG = -g
 CC = g++
 CPPFLAGS = -O2 -W -Wall -I$(IMGLIB)
-LDLIBS = -L$(IMGLIB) -lImg.$(ARCH) -lpng -lz
+LDLIBS = -L$(IMGLIB) -lImg.$(ARCH)$(DBG) -lpng -lz
 OBJ = $(SRC:.cpp=.o)
 
 all: $(BIN)

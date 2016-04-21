@@ -3,7 +3,7 @@
  * SGM stereo matching
  * CS 453 HW 8
  *
- * Name: Ben Brown, Felix Wang, Tao Peter Wang
+ * Name: Ben Bill Brown, Felix Yanwei Wang, Tao Peter Wang
  */
 
 #include <stdio.h>
@@ -17,10 +17,8 @@ extern int verbose;
 void clear_best(int *b, int ndisp)
 {
     memset(b, 0, ndisp * sizeof(int)); // shorter version of the following:
-    /*
-    for (int d = 0; d < ndisp; d++)
-	b[d] = 0;
-    */
+	//~ for (int d = 0; d < ndisp; d++)
+	//~ b[d] = 0;
 }
 
 // update best costs b according to SGM formula: b[d] = cost[d] + minimum of:
@@ -82,10 +80,10 @@ void computeSGM(CByteImage im1,      // source (reference) image
 
     // left-to-right
     for (y = 0; y < h; y++) {
-	clear_best(b, ndisp);
-	for (x = 0; x < w; x++) {
-	    update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
-	}
+		clear_best(b, ndisp);
+		for (x = 0; x < w; x++) {
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+		}
     }
 
     // FILL IN -- add other 3 directions
