@@ -3,7 +3,7 @@
  * SGM stereo matching
  * CS 453 HW 8
  *
- * Name:
+ * Name: Ben Brown, Felix Wang, Tao Peter Wang
  */
 
 #include <stdio.h>

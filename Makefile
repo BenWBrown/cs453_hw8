@@ -3,7 +3,8 @@
 SRC =  stereo2.cpp sgm.cpp crosscheck.cpp
 BIN =  stereo2
 
-IMGLIB = /home/schar/cs453/imageLib
+# IMGLIB = /home/schar/cs453/imageLib
+IMGLIB ../imageLib
 ARCH := $(shell arch)
 
 CC = g++
