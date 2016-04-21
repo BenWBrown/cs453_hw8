@@ -1,0 +1,287 @@
+#!/usr/bin/wish
+
+# runstereo2
+#
+# frontend for stereo2 program (HW 8)
+#
+# browser lists directories and lets you select
+# two pgm/ppm files with same size
+#
+# Daniel Scharstein  11/12/02
+# updated 4/18/16
+
+# make working directory
+set user [lindex [array get env USER] 1]
+set workdir /tmp/runstereo2.$user
+exec rm -rf $workdir
+exec mkdir $workdir
+
+# copy executable "stereo2" there
+exec cp stereo2 $workdir
+
+set stereofile $workdir/disp.pgm
+set img1file $workdir/img1.ppm
+set img2file $workdir/img2.ppm
+set imgsfile $workdir/imgs.ppm
+set spacerfile $workdir/spacer.pbm
+
+set myfont "-*-Helvetica-Medium-R-Normal--*-120-*"
+set myttfont "-*-Courier-Medium-R-Normal--*-120-*"
+# set myttfont 8x13
+
+label .pwd -relief sunk -anchor w -font $myttfont -width 24
+listbox .list -yscroll ".scroll set" -relief sunken -height 10 \
+	-setgrid yes -font $myttfont
+scrollbar .scroll -command ".list yview"
+frame .f2
+listbox .f2.list2 -yscroll ".f2.scroll2 set" -relief sunken -height 5 \
+	-setgrid yes -font $myttfont
+scrollbar .f2.scroll2 -command ".f2.list2 yview"
+frame .l
+label .l.l -anchor w -font $myfont -text "Left image:   "
+label .l.n -relief sunk -anchor w -font $myttfont -textvariable lim
+frame .r
+label .r.l -anchor w -font $myfont -text "Right image: "
+label .r.n -relief sunk -anchor w -font $myttfont -textvariable rim
+
+scale .dmin -orient horizontal -length 300 -from -10 -to 70 \
+	-command "setdmin" -label "dmin" -tickinterval 10 -font $myfont
+scale .dmax -orient horizontal -length 300 -from -10 -to 70 \
+	-command "setdmax" -label "dmax" -tickinterval 10 -font $myfont
+scale .p1 -orient horizontal -length 300 -from 1 -to 200  \
+	-command "setp1" -label "p1" -font $myfont
+scale .p2 -orient horizontal -length 300 -from 1 -to 200  \
+	-command "setp2" -label "p2" -font $myfont
+frame .b
+checkbutton .b.ccheck -variable ccheck -text "cross-check"
+checkbutton .b.holefill -variable holefill -text "fill holes"
+scale .scc -orient horizontal -length 300 -from 0 -to 10 \
+	-command "set scc" -label "cthresh" -font $myfont
+button .stereo -command runstereo -text "run stereo2"  -font $myfont -state disabled
+button .quit -command Quit -text "Quit"  -font $myfont
+
+pack .f2.scroll2 -side right -fill y -in .f2
+pack .f2.list2 -side left -fill x -expand yes -in .f2
+pack .l.l -side left -in .l
+pack .l.n -fill x -in .l
+pack .r.l -side left -in .r
+pack .r.n -fill x -in .r
+pack .b.ccheck .b.holefill -side left -fill x -expand yes -in .b
+pack  .quit .stereo .scc .b -fill x -side bottom -expand yes
+pack  .quit .stereo .b -fill x -side bottom -expand yes
+pack  .p2 .p1 .dmax .dmin -side bottom -expand yes
+pack  .r .f2 .l -side bottom -fill x -expand yes
+pack .pwd -side top
+pack .scroll -side right -fill y
+pack .list -side left -fill both -expand yes
+.dmin set 0
+.dmax set 15
+.p1 set 10
+.p2 set 20
+wm minsize . 1 1
+
+set lim ""
+set rim ""
+set width 0
+set height 0
+set dmin 0
+set dmax 15
+set p1 10
+set p2 20
+set imwin none
+set stereowin none
+
+exec pbmmake -w 10 10 > $spacerfile
+
+# displays 1 or 2 images
+proc displayIms {num} {
+    global lim rim imwin img1file img2file imgsfile spacerfile
+
+    if {$num == 1} {
+	# display left image only
+	exec convert $lim $imgsfile
+    } else {
+	# display both images
+	exec convert $lim $img1file
+	exec convert $rim $img2file
+	exec pnmcat -lr $img1file $spacerfile $img2file >$imgsfile
+    }
+    if {$imwin == "none"} {
+	set imwin 1
+	toplevel .imw
+	image create photo impair  -file $imgsfile
+	label .imw.img -image impair -relief ridge -borderwidth 3
+	pack .imw.img -in .imw
+    } else {
+	impair config -file $imgsfile
+    }
+    update
+    if {$num == 1} {
+	wm title .imw "Left image"
+    } else {
+	wm title .imw "Image pair"
+    }
+}
+
+# runs stereo program
+proc runstereo {} {
+    global dmin dmax p1 p2 lim rim img1file img2file stereowin stereofile workdir spacerfile holefill ccheck scc
+
+    set cross ""
+    if {$ccheck} {
+	set cross "-c $scc"
+    }
+
+    set hfill ""
+    if {$holefill} {
+	set hfill "-f"
+    }
+
+    set pwd [pwd]
+    cd $workdir
+    set cmd "./stereo2 $cross $hfill $p1 $p2 $dmin $dmax $img1file $img2file disp1.pgm disp2.pgm 2> output.txt"
+    eval exec $cmd
+    puts " "
+    puts [exec cat output.txt]
+    exec pnmcat -lr disp1.pgm $spacerfile disp2.pgm >$stereofile
+    cd $pwd
+    
+    if {$stereowin == "none"} {
+	set stereowin 1
+	toplevel .stereow
+	image create photo imstereo  -file $stereofile
+	label .stereow.img -image imstereo -relief ridge -borderwidth 3
+	pack .stereow.img -in .stereow
+    } else {
+	imstereo config -file $stereofile
+    }
+    update
+    wm title .stereow "STEREO (p1=$p1 p2=$p2)"
+}
+
+# browse directory or select left image
+proc browse {file} {
+    global lim rim
+    if [file isdirectory $file] {
+	cd $file
+	set dir [exec pwd]
+	set dirl [string length $dir]
+	if {$dirl < 20} {
+	    .pwd configure -text $dir/
+	} else {
+	    .pwd configure -text ..[string range $dir [expr $dirl - 20] end]/
+	}
+	.list delete 0 end
+	set rim ""
+	foreach i [exec ls -a] {
+	    if [file isdirectory $i] {
+		.list insert end $i/
+	    } elseif {[string match *.pgm $i] || [string match *.ppm $i] || [string match *.png $i]} {
+		.list insert end $i
+	    }
+	}
+    } else {
+	set lim $file
+	updatesize $file
+	if {$rim == ""} {
+	    .f2.list2 delete 0 end
+	    foreach i [exec ls -a] {
+		if {[string match *.pgm $i] || [string match *.ppm $i] || [string match *.png $i]} {
+		    if [samesize $i] {
+			.f2.list2 insert end $i
+		    }
+		}
+	    }
+	    displayIms 1
+	} else {
+	    displayIms 2
+	}
+    }
+}
+
+proc samesize {file} {
+    global width height
+
+    set w [exec identify -format %w $file]    
+    set h [exec identify -format %h $file]    
+    return [expr ($w == $width && $h == $height)]
+}
+
+# make sure that size of "file" is consistent
+proc updatesize {file} {
+    global rim width height
+
+    set w [exec identify -format %w $file]    
+    set h [exec identify -format %h $file]    
+    if {$w != $width || $h != $height} {
+	set width $w
+	set height $h
+	set rim ""
+	.stereo configure -state disabled
+    }
+}
+
+# select right image
+proc selectrim {file} {
+    global rim
+    set rim $file
+    .stereo configure -state normal
+    displayIms 2
+}
+
+# reacts to changing "dmin" slider
+proc setdmin {val} {
+    global dmin dmax
+    set dmin $val
+    if {$dmin >= $dmax} {
+	set dmax [expr $dmin + 1]
+	.dmax set $dmax
+    }
+}
+
+# reacts to changing "dmax" slider
+proc setdmax {val} {
+    global dmin dmax
+    set dmax $val
+    if {$dmax < $dmin} {
+	set dmin [expr $dmax - 1]
+	.dmin set $dmin
+    }
+}
+
+# reacts to changing "p1" slider
+proc setp1 {val} {
+    global p1 p2
+    set p1 $val
+    if {$p1 >= $p2} {
+	set p2 [expr $p1 + 1]
+	.p2 set $p2
+    }
+}
+
+# reacts to changing "p2" slider
+proc setp2 {val} {
+    global p1 p2
+    set p2 $val
+    if {$p2 < $p1} {
+	set p1 [expr $p2 - 1]
+	.p1 set $p1
+    }
+}
+
+proc Quit {} {
+    global workdir
+    exec rm -rf $workdir
+    destroy .
+}
+
+# Set up bindings
+
+bind all <Control-c> {Quit}
+bind all <q> {Quit}
+bind .list <Double-Button-1> {foreach i [selection get] {browse $i}}
+bind .f2.list2 <Double-Button-1> {selectrim [selection get]}
+
+if $argc>0 {set dir [lindex $argv 0]} else {set dir "."}
+
+browse $dir
