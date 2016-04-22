@@ -29,3 +29,6 @@
 
 # Makefile
 Makefile
+
+# Images
+*.png
