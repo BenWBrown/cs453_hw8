@@ -9,13 +9,6 @@
 #include "sgm.h"       // for OFFSET and ABS
 
 
-bool inBounds(int x, int y, int w, int h) {
-    return x >= 0 && x < w && y >= 0 && y < h;
-    return x >= 0 && x < w && y >= 0 && y < h;
-}
-
-
-
 // Crosscheck disparity maps disp1 and disp2 and set all inconsistent
 // disparities in disp1 to 0.  In detail:
 //
