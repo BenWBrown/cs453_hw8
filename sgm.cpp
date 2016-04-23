@@ -31,18 +31,32 @@ void clear_best(int *b, int ndisp)
 // once b has been computed, add its values to sumbest
 void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp)
 {
+	// *cost is a row
     int oldb[ndisp];
     
     // copy b into oldb and also precompute min
     std::memcpy(oldb, b, sizeof oldb);
 	
-	/***
-	 * I don't think I get the precompute minimum part
-	 * ---Pete
-	 */ 
-    
+	int i, d, currentMin;
+	for (d = 0; d < ndisp; d++) {		// copy over
+		b[d] = cost[d];
+		currentMin = oldb[d];
+		
+		for (i = 0; i < ndisp; i++) {
+			if (i == d)		// smaller that INT_MAX
+				continue;
+			
+			if (ABS(d - i) == 1 && oldb[i] + p1 < currentMin)
+				currentMin = oldb[i] + p1;
+			else if (oldb[i] + p2 < currentMin)
+				currentMin = oldb[i] + p2;
+		}
+		b[i] += currentMin;
+	}
+	
     // compute new best costs b and also add b to sumbest
-
+	for (d = 0; d < ndisp; d++)
+		sumbest[d] += b[d];
 }
 
 
@@ -84,7 +98,7 @@ void computeSGM(CByteImage im1,      // source (reference) image
 
     sumbest.ClearPixels();
     int b[ndisp]; // current best costs, this is just an array
-
+	
     // left-to-right
     for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
@@ -93,30 +107,30 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		}
     }
 	
-    // right to left
+    // right-to-left
 	for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = w - 1; x >= 0; x--) {
-			// TODO:
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
 		}
 	}
 	
-	// top to bottom
+	// top-to-bottom
 	for (x = 0; x < w; x++) {
 		clear_best(b, ndisp);
 		for (y = 0; y < h; y++) {
-			// TODO:
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
 		}
 	}
 	
-	// bottom to top
+	// bottom-to-top
 	for (x = 0; x < w; x++) {
 		clear_best(b, ndisp);
-		for (y = h - 1; y >= 0; y++) {
-			// TODO:
+		for (y = h - 1; y >= 0; y--) {
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
 		}
 	}
-
+	
     
     // find best disparity
     // for each pixel, find d with smallest sumcost
@@ -126,10 +140,11 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		for (x = 0; x < w; x++) {
 			minCost = INT_MAX;
 			for (d = 0; d < ndisp; d++) {
-				if (sumbest.Pixel(x, y, d) < minCost)
+				if (sumbest.Pixel(x, y, d) < minCost) {
 					minCost = sumbest.Pixel(x, y, d);
+					disp.Pixel(x, y, 0) = d + dmin + OFFSET;
+				}
 			}
-			disp.Pixel(x, y, 0) = minCost;
 		}
 	}
 }
