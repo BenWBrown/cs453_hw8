@@ -29,6 +29,7 @@ void clear_best(int *b, int ndisp)
 //  oldb[d+1] + p1 (disp jump of 1)
 //  oldb[d']  + p2  (any disp jump, for any d' -- can precompute minimum!)
 // once b has been computed, add its values to sumbest
+//~ void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp, bool diagonal)
 void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp)
 {
 	// *cost is a row
@@ -56,6 +57,7 @@ void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp)
 
     // compute new best costs b and also add b to sumbest
 	for (d = 0; d < ndisp; d++)
+		//~ sumbest[d] += diagonal ? 1 * b[d] : b[d];
 		sumbest[d] += b[d];
 }
 
@@ -98,12 +100,14 @@ void computeSGM(CByteImage im1,      // source (reference) image
 
     sumbest.ClearPixels();
     int b[ndisp]; // current best costs, this is just an array
+	//~ bool diagonal = false;
 
     // left-to-right
     for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = 0; x < w; x++) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
 		}
     }
 
@@ -112,6 +116,7 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		clear_best(b, ndisp);
 		for (x = w - 1; x >= 0; x--) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 
@@ -120,6 +125,7 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		clear_best(b, ndisp);
 		for (y = 0; y < h; y++) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 
@@ -128,20 +134,27 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		clear_best(b, ndisp);
 		for (y = h - 1; y >= 0; y--) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
+	
+	//~ p1 /= 1.5;		// reduce noise for diagonal lines
+	//~ p2 /= 1.5;
+	//~ diagonal = true;
 	
 	// top left -> bottom right
 	for (y = h - 1; y >= 0; y--) {
 		clear_best(b, ndisp);
 		for (x = 0; x < h - y && x < w; x++) {
 			update_best(b, &cost.Pixel(x, y + x, 0), &sumbest.Pixel(x, y + x, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y + x, 0), &sumbest.Pixel(x, y + x, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 	for (x = 1; x < w; x++) {
 		clear_best(b, ndisp);
 		for (y = 0; y < w - x && y < h; y++) {
 			update_best(b, &cost.Pixel(x + y, y, 0), &sumbest.Pixel(x + y, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x + y, y, 0), &sumbest.Pixel(x + y, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 	
@@ -150,12 +163,14 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		clear_best(b, ndisp);
 		for (x = w - 1; x >= 0 && w - 1 - x <= y; x--) {
 			update_best(b, &cost.Pixel(x, y + x - w + 1, 0), &sumbest.Pixel(x, y + x - w + 1, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y + x - w + 1, 0), &sumbest.Pixel(x, y + x - w + 1, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 	for (x = 0; x < w; x++) {
 		clear_best(b, ndisp);
 		for (y = h - 1; y >= 0 && h - 1 - y <= x; y--) {
 			update_best(b, &cost.Pixel(x + y - h + 1, y, 0), &sumbest.Pixel(x + y - h + 1, y, 0), p1, p2, ndisp); 
+			//~ update_best(b, &cost.Pixel(x + y - h + 1, y, 0), &sumbest.Pixel(x + y - h + 1, y, 0), p1, p2, ndisp, diagonal); 
 		}
 	}
 	
@@ -164,12 +179,14 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		clear_best(b, ndisp);
 		for (y = h - 1; y >= 0 && h - y <= w - x; y--) {
 			update_best(b, &cost.Pixel(x - y + h - 1, y, 0), &sumbest.Pixel(x - y + h - 1, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x - y + h - 1, y, 0), &sumbest.Pixel(x - y + h - 1, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 	for (y = 0; y < h - 1; y++) {
 		clear_best(b, ndisp);
 		for (x = 0; x < w && x <= y; x++) {
 			update_best(b, &cost.Pixel(x, y - x, 0), &sumbest.Pixel(x, y - x, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y - x, 0), &sumbest.Pixel(x, y - x, 0), p1, p2, ndisp, diagonal);
 		}
 	} 
 
@@ -178,12 +195,14 @@ void computeSGM(CByteImage im1,      // source (reference) image
 		clear_best(b, ndisp);
 		for (y = 0; y < h && y <= x; y++) {
 			update_best(b, &cost.Pixel(x - y, y, 0), &sumbest.Pixel(x - y, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x - y, y, 0), &sumbest.Pixel(x - y, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 	for (y = 1; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = w - 1; x >= 0 && w - x <= h - y; x--) {
 			update_best(b, &cost.Pixel(x, y - x + w - 1, 0), &sumbest.Pixel(x, y - x + w - 1, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y - x + w - 1, 0), &sumbest.Pixel(x, y - x + w - 1, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 
