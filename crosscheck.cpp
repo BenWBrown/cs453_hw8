@@ -46,27 +46,31 @@ void fillHoles(CByteImage disp, int xincr)
     CShape sh = disp.Shape();
     int w = sh.width, h = sh.height;
     bool beginning, right = (xincr == 1);
-    int numBeginning, beginningFill = 0;
+    int startIndex, beginningFill = 0;
 	
 	int x, y, d, end;
     for (y = 0; y < h; y++) {
         beginning = true;
-        numBeginning = 0;
+        startIndex = 0;
         for (x = (right ? 0 : w - 1);
 			right ? (x < w - 1) : (x > 0);
 			x += xincr) {
 			
             d = disp.Pixel(x, y, 0);
             if (beginning && (d != 0) ) {	// actual beginning
-                numBeginning = x;
+                startIndex = x;
                 beginningFill = d;
 				beginning = false;		// finished with beginning
             }
             if (disp.Pixel(x + xincr, y, 0) == 0)
                 disp.Pixel(x + xincr, y, 0) = d;
         }
+        
         end = right ? 0 : w - 1;
-        for (/* \(^_^)/ */; numBeginning >= 0; numBeginning--)
-            disp.Pixel(end + xincr * numBeginning, y, 0) = beginningFill;
+        
+        for (/* \(^_^)/ */;
+			right ? (startIndex >= 0) : (startIndex < w);
+			startIndex -= xincr)
+			disp.Pixel(end + xincr * startIndex, y, 0) = beginningFill;
     }
 }

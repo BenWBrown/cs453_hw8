@@ -33,27 +33,27 @@ void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp)
 {
 	// *cost is a row
     int oldb[ndisp];
-    
+
     // copy b into oldb and also precompute min
     std::memcpy(oldb, b, sizeof oldb);
-	
+
 	int i, d, currentMin;
 	for (d = 0; d < ndisp; d++) {		// copy over
 		b[d] = cost[d];
 		currentMin = oldb[d];
-		
+
 		for (i = 0; i < ndisp; i++) {
 			if (i == d)		// smaller that INT_MAX
 				continue;
-			
+
 			if (ABS(d - i) == 1 && oldb[i] + p1 < currentMin)
 				currentMin = oldb[i] + p1;
 			else if (oldb[i] + p2 < currentMin)
 				currentMin = oldb[i] + p2;
 		}
-		b[i] += currentMin;
+		b[d] += currentMin;
 	}
-	
+
     // compute new best costs b and also add b to sumbest
 	for (d = 0; d < ndisp; d++)
 		sumbest[d] += b[d];
@@ -78,7 +78,7 @@ void computeSGM(CByteImage im1,      // source (reference) image
     sh.nBands = ndisp;      // need width * height * ndisp
     CIntImage cost(sh);     // cost volume, or disparity space image (DSI)
     CIntImage sumbest(sh);  // summed costs
-	
+
     // compute costs
     // compute absolute differences for all pixels and all d = 0...ndisp-1
     // to convert d into actual disparities, add dmin, i.e.,
@@ -88,33 +88,33 @@ void computeSGM(CByteImage im1,      // source (reference) image
 			for (x = 0; x < w; x++) {
 				cost.Pixel(x, y, d) = !inBounds(x + d + dmin, y, w, h) ?
 							255 :
-							im1.Pixel(x, y, 0) 
-						  - im2.Pixel(x + d + dmin, y, 0);
+							ABS(im1.Pixel(x, y, 0)
+						  - im2.Pixel(x + d + dmin, y, 0));
 			}
 		}
 	}
-    
+
     // aggregate best costs in 4 directions for now (real SGM uses 8!)
 
     sumbest.ClearPixels();
     int b[ndisp]; // current best costs, this is just an array
-	
+
     // left-to-right
     for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = 0; x < w; x++) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
-		}
+		} ///???? disparity level iteration?
     }
-	
+
     // right-to-left
 	for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = w - 1; x >= 0; x--) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
-		}
+		} /////???? keep adding up sumbest?
 	}
-	
+
 	// top-to-bottom
 	for (x = 0; x < w; x++) {
 		clear_best(b, ndisp);
@@ -122,7 +122,7 @@ void computeSGM(CByteImage im1,      // source (reference) image
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
 		}
 	}
-	
+
 	// bottom-to-top
 	for (x = 0; x < w; x++) {
 		clear_best(b, ndisp);
@@ -130,11 +130,13 @@ void computeSGM(CByteImage im1,      // source (reference) image
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
 		}
 	}
-	
-    
+
+
     // find best disparity
     // for each pixel, find d with smallest sumcost
     // store d + dmin + OFFSET in disp image
+    disp.ClearPixels();		// THE magic line
+    
     int minCost;
 	for (y = 0; y < h; y++) {
 		for (x = 0; x < w; x++) {
