@@ -29,24 +29,39 @@ void clear_best(int *b, int ndisp)
 //  oldb[d+1] + p1 (disp jump of 1)
 //  oldb[d']  + p2  (any disp jump, for any d' -- can precompute minimum!)
 // once b has been computed, add its values to sumbest
+//~ void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp, bool diagonal)
 void update_best(int *b, int *cost, int *sumbest, int p1, int p2, int ndisp)
 {
+	// *cost is a row
     int oldb[ndisp];
     
     // copy b into oldb and also precompute min
     // std::memcpy(oldb, b, sizeof oldb);
-	/***
-	 * I don't think I get the precompute minimum part
-	 * ---Pete
-	 */ 
-    
-
-    /* instead use a loop to do this copy and keep track of the min throughout
-     * ---Ben
-     */
-	
     // compute new best costs b and also add b to sumbest
+    // copy b into oldb and also precompute min
+    std::memcpy(oldb, b, sizeof oldb);
 
+	int i, d, currentMin;
+	for (d = 0; d < ndisp; d++) {		// copy over
+		b[d] = cost[d];
+		currentMin = oldb[d];
+
+		for (i = 0; i < ndisp; i++) {
+			if (i == d)		// smaller that INT_MAX
+				continue;
+
+			if (ABS(d - i) == 1 && oldb[i] + p1 < currentMin)
+				currentMin = oldb[i] + p1;
+			else if (oldb[i] + p2 < currentMin)
+				currentMin = oldb[i] + p2;
+		}
+		b[d] += currentMin;
+	}
+
+    // compute new best costs b and also add b to sumbest
+	for (d = 0; d < ndisp; d++)
+		//~ sumbest[d] += diagonal ? 1 * b[d] : b[d];
+		sumbest[d] += b[d];
 }
 
 
@@ -78,62 +93,138 @@ void computeSGM(CByteImage im1,      // source (reference) image
 			for (x = 0; x < w; x++) {
 				cost.Pixel(x, y, d) = !inBounds(x + d + dmin, y, w, h) ?
 							255 :
-							im1.Pixel(x, y, 0) 
-						  - im2.Pixel(x + d + dmin, y, 0);
+							ABS(im1.Pixel(x, y, 0)
+						  - im2.Pixel(x + d + dmin, y, 0));
 			}
 		}
 	}
-    
+
     // aggregate best costs in 4 directions for now (real SGM uses 8!)
 
     sumbest.ClearPixels();
     int b[ndisp]; // current best costs, this is just an array
+    
+	//~ bool diagonal = false;
 
     // left-to-right
     for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = 0; x < w; x++) {
 			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
 		}
     }
-	
-    // right to left
+
+    // right-to-left
 	for (y = 0; y < h; y++) {
 		clear_best(b, ndisp);
 		for (x = w - 1; x >= 0; x--) {
-			// TODO:
-		}
-	}
-	
-	// top to bottom
-	for (x = 0; x < w; x++) {
-		clear_best(b, ndisp);
-		for (y = 0; y < h; y++) {
-			// TODO:
-		}
-	}
-	
-	// bottom to top
-	for (x = 0; x < w; x++) {
-		clear_best(b, ndisp);
-		for (y = h - 1; y >= 0; y++) {
-			// TODO:
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
 		}
 	}
 
-    
+	// top-to-bottom
+	for (x = 0; x < w; x++) {
+		clear_best(b, ndisp);
+		for (y = 0; y < h; y++) {
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+
+	// bottom-to-top
+	for (x = 0; x < w; x++) {
+		clear_best(b, ndisp);
+		for (y = h - 1; y >= 0; y--) {
+			update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y, 0), &sumbest.Pixel(x, y, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	
+	//~ p1 /= 1.5;		// reduce noise for diagonal lines
+	//~ p2 /= 1.5;
+	//~ diagonal = true;
+	
+	// top left -> bottom right
+	for (y = h - 1; y >= 0; y--) {
+		clear_best(b, ndisp);
+		for (x = 0; x < h - y && x < w; x++) {
+			update_best(b, &cost.Pixel(x, y + x, 0), &sumbest.Pixel(x, y + x, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y + x, 0), &sumbest.Pixel(x, y + x, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	for (x = 1; x < w; x++) {
+		clear_best(b, ndisp);
+		for (y = 0; y < w - x && y < h; y++) {
+			update_best(b, &cost.Pixel(x + y, y, 0), &sumbest.Pixel(x + y, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x + y, y, 0), &sumbest.Pixel(x + y, y, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	
+	// bottom right -> top left
+	for (y = 0; y < h - 1; y++) {
+		clear_best(b, ndisp);
+		for (x = w - 1; x >= 0 && w - 1 - x <= y; x--) {
+			update_best(b, &cost.Pixel(x, y + x - w + 1, 0), &sumbest.Pixel(x, y + x - w + 1, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y + x - w + 1, 0), &sumbest.Pixel(x, y + x - w + 1, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	for (x = 0; x < w; x++) {
+		clear_best(b, ndisp);
+		for (y = h - 1; y >= 0 && h - 1 - y <= x; y--) {
+			update_best(b, &cost.Pixel(x + y - h + 1, y, 0), &sumbest.Pixel(x + y - h + 1, y, 0), p1, p2, ndisp); 
+			//~ update_best(b, &cost.Pixel(x + y - h + 1, y, 0), &sumbest.Pixel(x + y - h + 1, y, 0), p1, p2, ndisp, diagonal); 
+		}
+	}
+	
+	// bottom left -> top right
+	for (x = 0; x < w; x ++) {
+		clear_best(b, ndisp);
+		for (y = h - 1; y >= 0 && h - y <= w - x; y--) {
+			update_best(b, &cost.Pixel(x - y + h - 1, y, 0), &sumbest.Pixel(x - y + h - 1, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x - y + h - 1, y, 0), &sumbest.Pixel(x - y + h - 1, y, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	for (y = 0; y < h - 1; y++) {
+		clear_best(b, ndisp);
+		for (x = 0; x < w && x <= y; x++) {
+			update_best(b, &cost.Pixel(x, y - x, 0), &sumbest.Pixel(x, y - x, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y - x, 0), &sumbest.Pixel(x, y - x, 0), p1, p2, ndisp, diagonal);
+		}
+	} 
+
+	// top right -> bottom left
+	for (x = 0; x < w; x++) {
+		clear_best(b, ndisp);
+		for (y = 0; y < h && y <= x; y++) {
+			update_best(b, &cost.Pixel(x - y, y, 0), &sumbest.Pixel(x - y, y, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x - y, y, 0), &sumbest.Pixel(x - y, y, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	for (y = 1; y < h; y++) {
+		clear_best(b, ndisp);
+		for (x = w - 1; x >= 0 && w - x <= h - y; x--) {
+			update_best(b, &cost.Pixel(x, y - x + w - 1, 0), &sumbest.Pixel(x, y - x + w - 1, 0), p1, p2, ndisp);
+			//~ update_best(b, &cost.Pixel(x, y - x + w - 1, 0), &sumbest.Pixel(x, y - x + w - 1, 0), p1, p2, ndisp, diagonal);
+		}
+	}
+	
     // find best disparity
     // for each pixel, find d with smallest sumcost
     // store d + dmin + OFFSET in disp image
+    disp.ClearPixels();		// THE magic line
+    
     int minCost;
 	for (y = 0; y < h; y++) {
 		for (x = 0; x < w; x++) {
 			minCost = INT_MAX;
 			for (d = 0; d < ndisp; d++) {
-				if (sumbest.Pixel(x, y, d) < minCost)
+				if (sumbest.Pixel(x, y, d) < minCost) {
 					minCost = sumbest.Pixel(x, y, d);
+					disp.Pixel(x, y, 0) = d + dmin + OFFSET;
+				}
 			}
-			disp.Pixel(x, y, 0) = minCost;
 		}
 	}
 }
