@@ -30,8 +30,11 @@ void crosscheck(CByteImage disp1, CByteImage disp2, int cthresh)
             if (disp == 0 ||
                 !inBounds(x + disp, y, w, h) ||
                 disp2.Pixel(x + disp, y, 0) == 0 ||
-                ABS(disp1.Pixel(x, y, 0) + disp2.Pixel(x + disp, y, 0)) > cthresh)
+                ABS(disp1.Pixel(x, y, 0) - OFFSET + disp2.Pixel(x + disp, y, 0) - OFFSET) > cthresh) {
 				disp1.Pixel(x, y, 0) = 0;
+				printf("%d\n", disp2.Pixel(x + disp, y, 0));
+			}
+				
         }
     }
 }
