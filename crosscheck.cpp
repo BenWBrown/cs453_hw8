@@ -26,17 +26,17 @@ void crosscheck(CByteImage disp1, CByteImage disp2, int cthresh)
 
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
-            int disp = disp1.Pixel(x, y, 0) - OFFSET;
-            if (disp == 0 ||
-                !inBounds(x + disp, y, w, h) ||
-                disp2.Pixel(x + disp, y, 0) == 0 ||
-                ABS(disp1.Pixel(x, y, 0) - OFFSET + disp2.Pixel(x + disp, y, 0) - OFFSET) > cthresh) {
+            int leftDisp = disp1.Pixel(x, y, 0) - OFFSET;
+            int rightDisp = disp2.Pixel(x + leftDisp, y, 0) - OFFSET;
+            if (leftDisp == 0 ||
+                !inBounds(x + leftDisp, y, w, h) ||
+                rightDisp == 0 ||
+                ABS(leftDisp + rightDisp) > cthresh) {
 				disp1.Pixel(x, y, 0) = 0;
-				printf("%d\n", disp2.Pixel(x + disp, y, 0));
 			}
 				
         }
-    }
+	}
 }
 
 
